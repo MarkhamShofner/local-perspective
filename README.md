@@ -105,15 +105,17 @@ The purpose of this forked repo is to streamline the process for developers to i
 e.g. - http://127.0.0.1:8080/?theme=580
 ```
 
-Working sites ids to use in the query string (http://127.0.0.1:8080/?theme=594)
--	580
--	594
+Working sites ids to use in the query string (http://127.0.0.1:8080/?theme=9591)
+-	9593
+-	9594
+-	9595
 
-An additional option to adjust the mixed-in configuration include urls (against the open data v2 API). Working urls to use pre-query string (indicate use with ?theme=current) 
--	http://data5-logotester2.dc.opendatadev.arcgis.com/
--	http://data5-logotester4.dc.opendatadev.arcgis.com/
+An additional option to adjust the mixed-in configuration include urls (against the open data v2 API). Working urls to use pre-query string (indicate use with ?theme=current) [need to be enabled in /etc/hosts file]
+-	logotesting2.dcdev.opendata.arcgis.com
+-	logotesting3.dcdev.opendata.arcgis.com
+-	logotesting4.dcdev.opendata.arcgis.com
 ```
-e.g. - http://data5-logotester4.dc.opendatadev.arcgis.com:8080/?theme=current
+e.g. - logotesting2.dcdev.opendata.arcgis.com:8080/?theme=current
 ```
 
 Another option is adjust the config parameters of an existing application on ArcGIS Online. Working appIds (configs available for viewing in the Configuration Parameters section of the "settings" tab of the related appId)
@@ -126,3 +128,4 @@ e.g. - http://127.0.0.1:8080/?appid=06f0c9022dc6411598babb9cdbc768fc
 -	06f0c9022dc6411598babb9cdbc768fc
 -	4d06775fbd5a4ae5bffe34ce5b37255a
   - http://dcdev.maps.arcgis.com/home/item.html?id=4d06775fbd5a4ae5bffe34ce5b37255a#settings
+
