@@ -102,7 +102,7 @@ The purpose of this forked repo is to streamline the process for developers to i
   - Another option is to run “python -m SimpleHTTPServer 8000” from the directory with the index.html file.
 3. Open up your locally hosted page and observe the example site, adding "/?theme=580".
 ```
-e.g. - http://127.0.0.1:8080/?theme=580
+e.g. - http://127.0.0.1:8080/?theme=9591
 ```
 
 Working sites ids to use in the query string (http://127.0.0.1:8080/?theme=9591)
@@ -128,4 +128,3 @@ e.g. - http://127.0.0.1:8080/?appid=06f0c9022dc6411598babb9cdbc768fc
 -	06f0c9022dc6411598babb9cdbc768fc
 -	4d06775fbd5a4ae5bffe34ce5b37255a
   - http://dcdev.maps.arcgis.com/home/item.html?id=4d06775fbd5a4ae5bffe34ce5b37255a#settings
-
