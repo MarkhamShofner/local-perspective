@@ -22,20 +22,20 @@
  */
 define(["dojo/_base/array", "dojo/_base/declare", "dojo/_base/kernel", "dojo/_base/lang",
 
-  "dojo/Evented", "dojo/Deferred", "dojo/string",
+"dojo/Evented", "dojo/Deferred", "dojo/string",
 
-  "dojo/dom-class",
+"dojo/dom-class",
 
-  "dojo/promise/all",
+"dojo/promise/all",
 
-  "esri/config", "esri/IdentityManager", "esri/lang", "esri/request", "esri/urlUtils",
+"esri/config", "esri/IdentityManager", "esri/lang", "esri/request", "esri/urlUtils",
 
-  "esri/arcgis/Portal", "esri/arcgis/OAuthInfo", "esri/arcgis/utils",
+"esri/arcgis/Portal", "esri/arcgis/OAuthInfo", "esri/arcgis/utils",
 
-  "esri/tasks/GeometryService",
+"esri/tasks/GeometryService",
 
-  "config/defaults"], function (
-    array, declare, kernel, lang, Evented, Deferred, string, domClass, all, esriConfig, IdentityManager, esriLang, esriRequest, urlUtils, esriPortal, ArcGISOAuthInfo, arcgisUtils, GeometryService, defaults) {
+"config/defaults"], function (
+array, declare, kernel, lang, Evented, Deferred, string, domClass, all, esriConfig, IdentityManager, esriLang, esriRequest, urlUtils, esriPortal, ArcGISOAuthInfo, arcgisUtils, GeometryService, defaults) {
     return declare([Evented], {
         config: {},
         orgConfig: {},
@@ -146,92 +146,9 @@ define(["dojo/_base/array", "dojo/_base/declare", "dojo/_base/kernel", "dojo/_ba
                     parseFloat(this.config.application_extent[1][0]), parseFloat(this.config.application_extent[1][1])]
                 ];
             }
-          }
-        }
-      }
-      return obj;
-    },
-    _createUrlParamsObject: function() {
-      var urlObject, url;
-      // retrieve url parameters. Templates all use url parameters to determine which arcgis.com
-      // resource to work with.
-      // Map templates use the webmap param to define the webmap to display
-      // Group templates use the group param to provide the id of the group to display.
-      // appid is the id of the application based on the template. We use this
-      // id to retrieve application specific configuration information. The configuration
-      // information will contain the values the  user selected on the template configuration
-      // panel.
-      url = document.location.href;
-      urlObject = urlUtils.urlToObject(url);
-      urlObject.query = urlObject.query || {};
-      // remove any HTML tags from query item
-      urlObject.query = esriLang.stripTags(urlObject.query);
-      return urlObject;
-    },
-    _initializeApplication: function() {
-      // If this app is hosted on an Esri environment.
-      if (this.templateConfig.esriEnvironment) {
-        var appLocation, instance;
-        // Check to see if the app is hosted or a portal. If the app is hosted or a portal set the
-        // sharing url and the proxy. Otherwise use the sharing url set it to arcgis.com.
-        // We know app is hosted (or portal) if it has /apps/ or /home/ in the url.
-        appLocation = location.pathname.indexOf("/apps/");
-        if (appLocation === -1) {
-          appLocation = location.pathname.indexOf("/home/");
-        }
-        // app is hosted and no sharing url is defined so let's figure it out.
-        if (appLocation !== -1) {
-          // hosted or portal
-          instance = location.pathname.substr(0, appLocation); //get the portal instance name
-          this.config.sharinghost = location.protocol + "//" + location.host + instance;
-          this.config.proxyurl = location.protocol + "//" + location.host + instance + "/sharing/proxy";
-        }
-      }
-      arcgisUtils.arcgisUrl = this.config.sharinghost + "/sharing/rest/content/items";
-      // Define the proxy url for the app
-      if (this.config.proxyurl) {
-        esriConfig.defaults.io.proxyUrl = this.config.proxyurl;
-        esriConfig.defaults.io.alwaysUseProxy = false;
-      }
-      // add opendatadev.arcgis.com to corsEnabledServers in config, to allow calls to v2 API
-      esriConfig.defaults.io.corsEnabledServers.push("opendatadev.arcgis.com");
-    },
-    _checkSignIn: function() {
-      var deferred, signedIn, oAuthInfo;
-      deferred = new Deferred();
-      //If there's an oauth appid specified register it
-      if (this.config.oauthappid) {
-        oAuthInfo = new ArcGISOAuthInfo({
-          appId: this.config.oauthappid,
-          portalUrl: this.config.sharinghost,
-          popup: true
-        });
-        IdentityManager.registerOAuthInfos([oAuthInfo]);
-      }
-      // check sign-in status
-      signedIn = IdentityManager.checkSignInStatus(this.config.sharinghost + "/sharing");
-      // resolve regardless of signed in or not.
-      signedIn.promise.always(function() {
-        deferred.resolve();
-      });
-      return deferred.promise;
-    },
-    _queryLocalization: function() {
-      var deferred, dirNode, classes, rtlClasses;
-      deferred = new Deferred();
-      if (this.templateConfig.queryForLocale) {
-        require(["dojo/i18n!application/nls/resources"], lang.hitch(this, function(appBundle) {
-          var cfg = {};
-          // Get the localization strings for the template and store in an i18n variable. Also determine if the
-          // application is in a right-to-left language like Arabic or Hebrew.
-          cfg.i18n = appBundle || {};
-          // Bi-directional language support added to support right-to-left languages like Arabic and Hebrew
-          // Note: The map must stay ltr
-          cfg.i18n.direction = "ltr";
-          array.some(["ar", "he"], lang.hitch(this, function(l) {
-            if (kernel.locale.indexOf(l) !== -1) {
-              cfg.i18n.direction = "rtl";
-              return true;
+            // Set the geometry helper service to be the app default.
+            if (this.config.helperServices && this.config.helperServices.geometry && this.config.helperServices.geometry.url) {
+                esriConfig.defaults.geometryService = new GeometryService(this.config.helperServices.geometry.url);
             }
         },
         _mixinAll: function () {
@@ -334,62 +251,11 @@ define(["dojo/_base/array", "dojo/_base/declare", "dojo/_base/kernel", "dojo/_ba
                 });
                 IdentityManager.registerOAuthInfos([oAuthInfo]);
             }
-            console.log("Domain/Site Success: ", response);
-            // adjust theme values based on response and status
-            self.adjustSharedTheme(response, sharedThemeStatus.status);
-            deferred.resolve();
-          },
-          function(error) {
-            console.log("Error in grabbing theme from devAPI: ", error.message);
-          });
-      } // if the status is "appId" then adjust theme values based on self.appConfig
-        else if (sharedThemeStatus.status === "appId") {
-        console.log("AppId Success:", self.appConfig);
-        self.adjustSharedTheme(self.appConfig, sharedThemeStatus.status);
-        deferred.resolve();
-      } else {
-        console.log("no match");
-        deferred.resolve();
-      }
-      return deferred.promise;
-    },
-    adjustSharedTheme: function(data, status) {
-      // overwrite the title, color, and logo values based on the chosen data return
-      if (status === "domain" || status === "siteId") {
-        this.sharedTheme.title = data.attributes.title;
-        this.sharedTheme.colors[0] = data.attributes.theme.body.bg;
-        this.sharedTheme.logo = data.attributes.theme.logo.small;
-      } else if (status === "appId") {
-        this.sharedTheme.title = data.title;
-        this.sharedTheme.colors[0] = data.color;
-        this.sharedTheme.logo = data.logo;
-      }
-      console.log("Adjusted sS Obj:", this.sharedTheme);
-    },
-    /////////////////////////////////////////////////////////////////
-    ///////  POST  //////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////
-    queryGroupItems: function(options) {
-      var deferred = new Deferred(),
-        error, defaultParams, params;
-      // If we want to get the group info
-      if (this.templateConfig.queryForGroupItems) {
-        if (this.config.group) {
-          // group params
-          defaultParams = {
-            q: "group:\"${groupid}\" AND -type:\"Code Attachment\"",
-            sortField: "modified",
-            sortOrder: "desc",
-            num: 9,
-            start: 0,
-            f: "json"
-          };
-          // mixin params
-          params = lang.mixin(defaultParams, this.templateConfig.groupParams, options);
-          // place group ID
-          if (params.q) {
-            params.q = string.substitute(params.q, {
-              groupid: this.config.group
+            // check sign-in status
+            signedIn = IdentityManager.checkSignInStatus(this.config.sharinghost + "/sharing");
+            // resolve regardless of signed in or not.
+            signedIn.promise.always(function () {
+                deferred.resolve();
             });
             return deferred.promise;
         },
@@ -563,108 +429,182 @@ define(["dojo/_base/array", "dojo/_base/declare", "dojo/_base/kernel", "dojo/_ba
                 // just resolve
                 deferred.resolve();
             }
-          };
-          cfg.itemInfo = defaultWebmap;
-          this.itemConfig = cfg;
-          deferred.resolve(cfg);
-        }
-        // use webmap from id
-        else {
-          arcgisUtils.getItem(this.config.webmap).then(lang.hitch(this, function(itemInfo) {
-            // Set the itemInfo config option. This can be used when calling createMap instead of the webmap id
-            cfg.itemInfo = itemInfo;
-            this.itemConfig = cfg;
-            deferred.resolve(cfg);
-          }), function(error) {
-            if (!error) {
-              error = new Error("Error retrieving display item.");
-            }
-            deferred.reject(error);
-          });
-        }
-      } else {
-        // we're done. we dont need to get the webmap
-        deferred.resolve();
-      }
-      return deferred.promise;
-    },
-    queryApplication: function() {
-      // Get the application configuration details using the application id. When the response contains
-      // itemData.values then we know the app contains configuration information. We'll use these values
-      // to overwrite the application defaults.
-      var deferred = new Deferred();
-      if (this.config.appid) {
-        arcgisUtils.getItem(this.config.appid).then(lang.hitch(this, function(response) {
-          var cfg = {};
-          if (response.item && response.itemData && response.itemData.values) {
-            // get app config values - we'll merge them with config later.
-            cfg = response.itemData.values;
-            // save response
-            cfg.appResponse = response;
-          }
-          // get the extent for the application item. This can be used to override the default web map extent
-          if (response.item && response.item.extent) {
-            cfg.application_extent = response.item.extent;
-          }
-          // get any app proxies defined on the application item
-          if (response.item && response.item.appProxies) {
-            var layerMixins = array.map(response.item.appProxies, function(p) {
-              return {
-                "url": p.sourceUrl,
-                "mixin": {
-                  "url": p.proxyUrl
+            return deferred.promise;
+        },
+        queryGroupInfo: function () {
+            var deferred = new Deferred(),
+                error, params;
+            // If we want to get the group info
+            if (this.templateConfig.queryForGroupInfo) {
+                if (this.config.group) {
+                    // group params
+                    params = {
+                        q: "id:\"" + this.config.group + "\"",
+                        f: "json"
+                    };
+                    this.portal.queryGroups(params).then(lang.hitch(this, function (response) {
+                        var cfg = {};
+                        cfg.groupInfo = response;
+                        this.groupInfoConfig = cfg;
+                        deferred.resolve(cfg);
+                    }), function (error) {
+                        deferred.reject(error);
+                    });
+                } else {
+                    error = new Error("Group undefined.");
+                    deferred.reject(error);
                 }
-              };
-            });
-            cfg.layerMixins = layerMixins;
-          }
-          this.appConfig = cfg;
-          deferred.resolve(cfg);
-        }), function(error) {
-          if (!error) {
-            error = new Error("Error retrieving application configuration.");
-          }
-          deferred.reject(error);
-        });
-      } else {
-        deferred.resolve();
-      }
-      return deferred.promise;
-    },
-    queryOrganization: function() {
-      var deferred = new Deferred();
-      if (this.templateConfig.queryForOrg) {
-        // Query the ArcGIS.com organization. This is defined by the sharinghost that is specified. For example if you
-        // are a member of an org you'll want to set the sharinghost to be http://<your org name>.arcgis.com. We query
-        // the organization by making a self request to the org url which returns details specific to that organization.
-        // Examples of the type of information returned are custom roles, units settings, helper services and more.
-        // If this fails, the application will continue to function
-        esriRequest({
-          url: this.config.sharinghost + "/sharing/rest/portals/self",
-          content: {
-            "f": "json"
-          },
-          callbackParamName: "callback"
-        }).then(lang.hitch(this, function(response) {
-          var cfg = {};
-          // save organization information
-          cfg.orgInfo = response;
-          // get units defined by the org or the org user
-          cfg.units = "metric";
-          if (response.user && response.user.units) { //user defined units
-            cfg.units = response.user.units;
-          } else if (response.units) { //org level units
-            cfg.units = response.units;
-          } else if ((response.user && response.user.region && response.user.region === "US") || (response.user && !response.user.region && response.region === "US") || (response.user && !response.user.region && !response.region) || (!response.user && response.ipCntryCode === "US") || (!response.user && !response.ipCntryCode && kernel.locale === "en-us")) {
-            // use feet/miles only for the US and if nothing is set for a user
-            cfg.units = "english";
-          }
-          // Get the helper services (routing, print, locator etc)
-          cfg.helperServices = response.helperServices;
-          // are any custom roles defined in the organization?
-          if (response.user && esriLang.isDefined(response.user.roleId)) {
-            if (response.user.privileges) {
-              cfg.userPrivileges = response.user.privileges;
+            } else {
+                // just resolve
+                deferred.resolve();
+            }
+            return deferred.promise;
+        },
+        queryItem: function () {
+            var deferred, cfg = {};
+            // Get details about the specified web map. If the web map is not shared publicly users will
+            // be prompted to log-in by the Identity Manager.
+            deferred = new Deferred();
+            // If we want to get the webmap
+            if (this.templateConfig.queryForWebmap) {
+                // Use local webmap instead of portal webmap
+                if (this.templateConfig.useLocalWebmap) {
+                    // get webmap js file
+                    require([this.templateConfig.localWebmapFile], lang.hitch(this, function (webmap) {
+                        // return webmap json
+                        cfg.itemInfo = webmap;
+                        this.itemConfig = cfg;
+                        deferred.resolve(cfg);
+                    }));
+                }
+                // no webmap is set and we have organization's info
+                else if (!this.config.webmap && this.config.orgInfo) {
+                    var defaultWebmap = {
+                        "item": {
+                            "title": "Default Webmap",
+                            "type": "Web Map",
+                            "description": "A webmap with the default basemap and extent.",
+                            "snippet": "A webmap with the default basemap and extent.",
+                            "extent": this.config.orgInfo.defaultExtent
+                        },
+                        "itemData": {
+                            "operationalLayers": [],
+                            "baseMap": this.config.orgInfo.defaultBasemap
+                        }
+                    };
+                    cfg.itemInfo = defaultWebmap;
+                    this.itemConfig = cfg;
+                    deferred.resolve(cfg);
+                }
+                // use webmap from id
+                else {
+                    arcgisUtils.getItem(this.config.webmap).then(lang.hitch(this, function (itemInfo) {
+                        // Set the itemInfo config option. This can be used when calling createMap instead of the webmap id
+                        cfg.itemInfo = itemInfo;
+                        this.itemConfig = cfg;
+                        deferred.resolve(cfg);
+                    }), function (error) {
+                        if (!error) {
+                            error = new Error("Error retrieving display item.");
+                        }
+                        deferred.reject(error);
+                    });
+                }
+            } else {
+                // we're done. we dont need to get the webmap
+                deferred.resolve();
+            }
+            return deferred.promise;
+        },
+        queryApplication: function () {
+            // Get the application configuration details using the application id. When the response contains
+            // itemData.values then we know the app contains configuration information. We'll use these values
+            // to overwrite the application defaults.
+            var deferred = new Deferred();
+            if (this.config.appid) {
+                arcgisUtils.getItem(this.config.appid).then(lang.hitch(this, function (response) {
+                    var cfg = {};
+                    if (response.item && response.itemData && response.itemData.values) {
+                        // get app config values - we'll merge them with config later.
+                        cfg = response.itemData.values;
+                        // save response
+                        cfg.appResponse = response;
+                    }
+                    // get the extent for the application item. This can be used to override the default web map extent
+                    if (response.item && response.item.extent) {
+                        cfg.application_extent = response.item.extent;
+                    }
+                    // get any app proxies defined on the application item
+                    if (response.item && response.item.appProxies) {
+                        var layerMixins = array.map(response.item.appProxies, function (p) {
+                            return {
+                                "url": p.sourceUrl,
+                                "mixin": {
+                                    "url": p.proxyUrl
+                                }
+                            };
+                        });
+                        cfg.layerMixins = layerMixins;
+                    }
+                    this.appConfig = cfg;
+                    deferred.resolve(cfg);
+                }), function (error) {
+                    if (!error) {
+                        error = new Error("Error retrieving application configuration.");
+                    }
+                    deferred.reject(error);
+                });
+            } else {
+                deferred.resolve();
+            }
+            return deferred.promise;
+        },
+        queryOrganization: function () {
+            var deferred = new Deferred();
+            if (this.templateConfig.queryForOrg) {
+                // Query the ArcGIS.com organization. This is defined by the sharinghost that is specified. For example if you
+                // are a member of an org you'll want to set the sharinghost to be http://<your org name>.arcgis.com. We query
+                // the organization by making a self request to the org url which returns details specific to that organization.
+                // Examples of the type of information returned are custom roles, units settings, helper services and more.
+                // If this fails, the application will continue to function
+                esriRequest({
+                    url: this.config.sharinghost + "/sharing/rest/portals/self",
+                    content: {
+                        "f": "json"
+                    },
+                    callbackParamName: "callback"
+                }).then(lang.hitch(this, function (response) {
+                    var cfg = {};
+                    // save organization information
+                    cfg.orgInfo = response;
+                    // get units defined by the org or the org user
+                    cfg.units = "metric";
+                    if (response.user && response.user.units) { //user defined units
+                        cfg.units = response.user.units;
+                    } else if (response.units) { //org level units
+                        cfg.units = response.units;
+                    } else if ((response.user && response.user.region && response.user.region === "US") || (response.user && !response.user.region && response.region === "US") || (response.user && !response.user.region && !response.region) || (!response.user && response.ipCntryCode === "US") || (!response.user && !response.ipCntryCode && kernel.locale === "en-us")) {
+                        // use feet/miles only for the US and if nothing is set for a user
+                        cfg.units = "english";
+                    }
+                    // Get the helper services (routing, print, locator etc)
+                    cfg.helperServices = response.helperServices;
+                    // are any custom roles defined in the organization?
+                    if (response.user && esriLang.isDefined(response.user.roleId)) {
+                        if (response.user.privileges) {
+                            cfg.userPrivileges = response.user.privileges;
+                        }
+                    }
+                    this.orgConfig = cfg;
+                    deferred.resolve(cfg);
+                }), function (error) {
+                    if (!error) {
+                        error = new Error("Error retrieving organization information.");
+                    }
+                    deferred.reject(error);
+                });
+            } else {
+                deferred.resolve();
             }
             return deferred.promise;
         }
